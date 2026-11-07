@@ -176,8 +176,8 @@ func main() {
 
 		cmd := exec.Command("ffmpeg",
 			"-i", inputPath,
-			// 🌟 Khit.to Watermark ကို ညာဘက်အပေါ်ထောင့် (Opacity 50%) ဖြင့် ထည့်ခြင်း
-			"-vf", "scale=w=1280:h=720:force_original_aspect_ratio=decrease,drawtext=text='Khit.to':fontcolor=white@0.5:fontsize=24:x=W-tw-20:y=20",
+			// 🌟 Khit.to Watermark နှင့် မတူညီသော Video Resolution များတွင် Error မတက်စေရန် force_divisible_by=2 ထည့်ခြင်း
+			"-vf", "scale=w=1280:h=720:force_original_aspect_ratio=decrease:force_divisible_by=2,drawtext=text='Khit.to':fontcolor=white@0.5:fontsize=24:x=W-tw-20:y=20",
 			// 🌟 YouTube လို ဖိုင်ဆိုက် သေးသွားအောင် ဖိသိပ်အား (CRF 28) သုံးခြင်း
 			"-c:v", "libx264", "-crf", "28", "-preset", "veryfast",
 			"-c:a", "aac", "-ar", "48000", "-b:a", "96k",
@@ -191,8 +191,10 @@ func main() {
 			masterM3u8Path,
 		)
 
-		if err := cmd.Run(); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg ပြောင်းလဲခြင်း မအောင်မြင်ပါ"})
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Println("❌ FFmpeg အမှားအယွင်း:", string(output), err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "FFmpeg ပြောင်းလဲခြင်း မအောင်မြင်ပါ: " + string(output)})
 			return
 		}
 
