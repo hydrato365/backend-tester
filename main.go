@@ -196,12 +196,20 @@ func main() {
 			return
 		}
 
+		// 🌟 ဗီဒီယိုထဲမှ Thumbnail ပုံအား FFmpeg ဖြင့် ၁ စက္ကန့်မြောက်နေရာမှ ဖြတ်ထုတ်ယူခြင်း
+		log.Println("⏳ ဗီဒီယိုထဲမှ Thumbnail ပုံအား ထုတ်ယူနေပါသည်...")
+		thumbPath := filepath.Join(tempDir, "thumb.jpg")
+		thumbCmd := exec.Command("ffmpeg", "-ss", "00:00:01", "-i", inputPath, "-vframes", "1", "-q:v", "2", thumbPath)
+		if err := thumbCmd.Run(); err != nil {
+			exec.Command("ffmpeg", "-i", inputPath, "-vframes", "1", "-q:v", "2", thumbPath).Run()
+		}
+
 		// ၄။ ရလာတဲ့ HLS ဖိုင်တွေ အားလုံးကို Cloudflare R2 ဆီ လှမ်းပို့မယ်
 		log.Println("⏳ Cloudflare R2 သို့ Upload တင်နေပါသည်...")
 		files, _ := os.ReadDir(tempDir)
 		for _, f := range files {
-			// 🌟 .key ဖိုင်ကိုပါ ExoPlayer ဖွင့်နိုင်ရန် R2 သို့ တင်ပေးရပါမည်
-			if strings.HasSuffix(f.Name(), ".m3u8") || strings.HasSuffix(f.Name(), ".ts") || strings.HasSuffix(f.Name(), ".key") {
+			// 🌟 .key နှင့် .jpg ဖိုင်များကိုပါ R2 သို့ တင်ပေးရပါမည်
+			if strings.HasSuffix(f.Name(), ".m3u8") || strings.HasSuffix(f.Name(), ".ts") || strings.HasSuffix(f.Name(), ".key") || strings.HasSuffix(f.Name(), ".jpg") {
 				err := uploadFileToR2(filepath.Join(tempDir, f.Name()), videoID+"/"+f.Name())
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "R2 သို့ Upload တင်ရာတွင် ကျရှုံးပါသည်: " + err.Error()})
@@ -210,15 +218,16 @@ func main() {
 			}
 		}
 
-		// ၅။ အောင်မြင်ကြောင်းနဲ့ ကြည့်ရမယ့် M3U8 Link ကို ပြန်ပို့ပေးမယ်
+		// ၅။ အောင်မြင်ကြောင်းနဲ့ ကြည့်ရမယ့် M3U8 Link နှင့် Thumbnail Link ကို ဖန်တီးမည်
 		publicUrl := fmt.Sprintf("https://pub-d56c2df021154436960a29402e69ff18.r2.dev/%s/master.m3u8", videoID)
+		thumbUrl := fmt.Sprintf("https://pub-d56c2df021154436960a29402e69ff18.r2.dev/%s/thumb.jpg", videoID)
 
 		// 🌟 ၆။ Database (Supabase) ထဲသို့ ဗီဒီယို မှတ်တမ်းအသစ် သိမ်းဆည်းခြင်း
 		newVideo := Video{
 			Title:        title,
 			Description:  description,
 			VideoUrl:     publicUrl,
-			ThumbnailUrl: "https://images.unsplash.com/photo-1611162617474-5b21e879e113", // ယာယီ ပုံ
+			ThumbnailUrl: thumbUrl,
 			// Creator ID အစစ် မရှိသေးသဖြင့် UUID အလွတ်တစ်ခု ယာယီ ထည့်ထားမည်
 			CreatorID: "00000000-0000-0000-0000-000000000000",
 			Views:     0,
@@ -252,6 +261,8 @@ func uploadFileToR2(localFilePath string, r2Key string) error {
 	contentType := "video/mp2t"
 	if strings.HasSuffix(localFilePath, ".m3u8") {
 		contentType = "application/vnd.apple.mpegurl"
+	} else if strings.HasSuffix(localFilePath, ".jpg") || strings.HasSuffix(localFilePath, ".jpeg") {
+		contentType = "image/jpeg"
 	}
 
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
