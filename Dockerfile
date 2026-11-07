@@ -10,7 +10,7 @@ RUN go build -o main .
 # Final Image ဖန်တီးမယ်
 FROM alpine:latest
 # 🌟 ဒီနေရာက အသက်ပါ။ FFmpeg ကို ဆာဗာထဲ အလိုအလျောက် သွင်းပေးသွားပါမယ်။
-RUN apk add --no-cache ffmpeg ca-certificates
+RUN apk add --no-cache ffmpeg ca-certificates ttf-dejavu fontconfig
 WORKDIR /app
 COPY --from=builder /app/main .
 # Port 8080 ကို ဖွင့်မယ်
