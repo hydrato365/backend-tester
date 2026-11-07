@@ -83,7 +83,7 @@ func init() {
 
 func main() {
 	// 🌟 ၁။ Supabase PostgreSQL (Direct Connection: Port 5432) သို့ ချိတ်ဆက်ခြင်း
-	dsn := "postgresql://postgres:aeiouminnyima5U@db.ewevqedvcldvreyqnbbr.supabase.co:5432/postgres"
+	dsn := "postgresql://postgres.ewevqedvcldvreyqnbbr:aeiouminnyima5U@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres"
 	var err error
 
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
